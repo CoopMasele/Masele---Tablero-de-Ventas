@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero Masele — Colocaciones</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3}
+.container{max-width:1100px;margin:0 auto;padding:20px 24px}
+.header{padding:16px 0 14px;border-bottom:1px solid #e0e0d8;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-weight:700;font-size:14px}
+.title-block h1{font-size:19px;font-weight:600;line-height:1.2;color:#111}
+.title-block p{font-size:12px;color:#888}
+.badge{font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600}
+.header-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:8px;padding:13px 15px;border:1px solid #e8e8e0}
+.kpi-label{font-size:11px;color:#888;margin-bottom:5px}
+.kpi-value{font-size:21px;font-weight:600;color:#111}
+.kpi-sub{font-size:11px;color:#999;margin-top:3px}
+.kpi.ok .kpi-value{color:#16a34a}
+.kpi.warn .kpi-value{color:#ca8a04}
+.kpi.danger .kpi-value{color:#dc2626}
+.tabs{display:flex;border-bottom:1px solid #e0e0d8;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:9px 15px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#666;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.tab.active{color:#1d4ed8;border-bottom-color:#1d4ed8;font-weight:500}
+.panel{display:none}.panel.active{display:block}
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e0e0d8;margin-bottom:14px;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:920px}
+thead th{background:#f8f8f6;font-weight:600;font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid #e0e0d8;text-align:right;white-space:nowrap}
+thead th:first-child{text-align:left}
+tbody tr{border-bottom:1px solid #f0f0e8}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#fafaf8}
+tbody tr.total-row{background:#f8f8f6;border-top:2px solid #d0d0c8}
+tbody tr.total-row td{font-weight:600}
+td{padding:7px 10px;text-align:right;vertical-align:middle}
+td:first-child{text-align:left;font-weight:500}
+.pct-pill{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.pct-ok{background:#dcfce7;color:#166534}
+.pct-warn{background:#fef9c3;color:#854d0e}
+.pct-bad{background:#fee2e2;color:#991b1b}
+.btn{padding:8px 16px;font-size:13px;cursor:pointer;border-radius:6px;font-family:inherit;font-weight:500}
+.btn-primary{background:#1d4ed8;color:#fff;border:none}
+.btn-primary:hover{background:#1e40af}
+.btn-secondary{background:#fff;color:#111;border:1px solid #c0c0b8}
+.btn-secondary:hover{background:#f5f5f3}
+.btn-success{background:#16a34a;color:#fff;border:none}
+.btn-success:hover{background:#15803d}
+.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.foot-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.foot-card{background:#fff;border-radius:8px;padding:13px 15px;border:1px solid #e0e0d8}
+.foot-card-title{font-size:11px;color:#888;margin-bottom:6px;font-weight:500}
+.foot-val{font-size:16px;font-weight:600;color:#111}
+.foot-sub{display:flex;gap:16px;margin-top:4px;font-size:11px;color:#888;flex-wrap:wrap}
+.foot-edit{display:flex;align-items:center;gap:6px;margin-top:8px}
+.foot-edit input{font-size:12px;padding:5px 8px;width:160px;border:1px solid #d0d0c8;border-radius:6px;font-family:inherit}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin-bottom:14px}
+.form-field{display:flex;flex-direction:column;gap:4px}
+.form-field label{font-size:12px;color:#555;font-weight:500}
+.form-field input,.form-field select{font-size:13px;padding:7px 10px;border:1px solid #d0d0c8;border-radius:6px;background:#fff;font-family:inherit}
+.section-card{background:#fff;border-radius:8px;padding:16px;border:1px solid #e0e0d8;margin-bottom:14px}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e40af;margin-bottom:13px}
+.success-box{background:#dcfce7;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;margin-bottom:13px}
+.error-box{background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:13px}
+.loading{text-align:center;padding:40px;color:#888;font-size:14px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid #e0e0d8;border-top-color:#1d4ed8;border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success{color:#16a34a}.danger{color:#dc2626}.warn{color:#ca8a04}
+.chart-section{background:#fff;border-radius:8px;padding:16px;border:1px solid #e0e0d8;margin-bottom:14px}
+.chart-tabs{display:flex;gap:4px;margin-bottom:14px}
+.chart-tab{padding:4px 11px;font-size:12px;cursor:pointer;border-radius:6px;border:1px solid #d0d0c8;background:#fff;color:#555;font-family:inherit}
+.chart-tab.active{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;font-weight:500}
+.config-table{min-width:460px;width:100%;border-collapse:collapse}
+.btn-danger-sm{background:none;border:none;color:#dc2626;cursor:pointer;font-size:12px;padding:2px 6px}
+h3{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">M</div>
+    <div class="title-block">
+      <h1>Colocaciones Masele</h1>
+      <p id="fecha-display">Cargando...</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="ultima-act" style="font-size:11px;color:#888"></span>
+    <span class="badge" id="estado-badge" style="background:#e0e0d8;color:#555">—</span>
+    <label class="btn btn-primary" style="cursor:pointer">
+      ⬆ Importar Document.xlsx
+      <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none" onchange="importarXLSX(this)">
+    </label>
+    <button class="btn btn-secondary" onclick="cargarDatos()">↺ Actualizar</button>
+    <button class="btn btn-success" onclick="exportarCSV()">⬇ Exportar CSV</button>
+  </div>
+</div>
+
+<div id="kpi-row" class="kpi-row">
+  <div class="kpi"><div class="kpi-label">Estado</div><div class="kpi-value" style="font-size:14px"><span class="spinner"></span>Cargando datos...</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('tabla')">Tabla de entidades</button>
+  <button class="tab" onclick="switchTab('grafico')">Evolución diaria</button>
+  <button class="tab" onclick="switchTab('config')">Configuración</button>
+</div>
+
+<!-- TABLA -->
+<div id="panel-tabla" class="panel active">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2" style="text-align:left;vertical-align:bottom">Entidad</th>
+          <th colspan="2" style="text-align:center;border-bottom:1px solid #e0e0d8">PE mes</th>
+          <th colspan="2" style="text-align:center;border-bottom:1px solid #e0e0d8">Real mes</th>
+          <th>%Part.</th><th>Ticket prom.</th><th>PP</th>
+          <th>Interés s/IVA</th><th>TNA pond.</th><th>Cump.</th><th>Proyección</th>
+        </tr>
+        <tr><th>#</th><th>$</th><th>#</th><th>K neto</th><th></th><th></th><th></th><th></th><th></th><th></th><th></th></tr>
+      </thead>
+      <tbody id="table-body"><tr><td colspan="12" class="loading"><span class="spinner"></span>Cargando...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="foot-row">
+    <div class="foot-card">
+      <div class="foot-card-title">Colocación diaria esperada vs real</div>
+      <div class="foot-val" id="col-diaria-real">—</div>
+      <div class="foot-sub"><span>Esperada: <b id="col-diaria-esp">—</b></span><span id="col-diaria-pct"></span></div>
+    </div>
+    <div class="foot-card">
+      <div class="foot-card-title">Objetivo propio del equipo</div>
+      <div class="foot-val" id="obj-propio-real">—</div>
+      <div class="foot-sub"><span>Meta: <b id="obj-propio-meta">—</b></span><span id="obj-propio-pct"></span></div>
+      <div class="foot-edit">
+        <input type="number" id="obj-real-input" placeholder="Real acumulado $">
+        <button class="btn btn-secondary" style="font-size:12px;padding:5px 11px" onclick="actualizarObjReal()">Actualizar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GRÁFICO -->
+<div id="panel-grafico" class="panel">
+  <div class="chart-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3>Evolución de capital colocado</h3>
+      <div class="chart-tabs">
+        <button class="chart-tab active" onclick="switchChart('diario',this)">Diario</button>
+        <button class="chart-tab" onclick="switchChart('acumulado',this)">Acumulado</button>
+        <button class="chart-tab" onclick="switchChart('entidades',this)">Por entidad</button>
+      </div>
+    </div>
+    <div style="position:relative;width:100%;height:300px"><canvas id="chart-main"></canvas></div>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div id="panel-config" class="panel">
+  <div class="section-card">
+    <h3>Presupuesto mensual (PE) por entidad</h3>
+    <div style="overflow-x:auto;margin-top:10px">
+      <table class="config-table">
+        <thead><tr>
+          <th style="text-align:left;padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8">Entidad</th>
+          <th style="text-align:right;padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8"># PE</th>
+          <th style="text-align:right;padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8">$ PE</th>
+          <th style="padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8"></th>
+        </tr></thead>
+        <tbody id="config-body"></tbody>
+      </table>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="agregarEntidad()">+ Agregar entidad</button>
+    </div>
+  </div>
+  <div class="section-card">
+    <h3>Parámetros del mes</h3>
+    <div class="form-grid" style="max-width:560px;margin-top:10px">
+      <div class="form-field"><label>Mes</label>
+        <select id="cfg-mes-num" onchange="previsualizarDias()">
+          <option value="0">Enero</option><option value="1">Febrero</option><option value="2">Marzo</option>
+          <option value="3">Abril</option><option value="4">Mayo</option><option value="5">Junio</option>
+          <option value="6">Julio</option><option value="7">Agosto</option><option value="8">Septiembre</option>
+          <option value="9">Octubre</option><option value="10">Noviembre</option><option value="11">Diciembre</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Año</label>
+        <select id="cfg-anio" onchange="previsualizarDias()">
+          <option value="2025">2025</option><option value="2026" selected>2026</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Objetivo propio — meta ($)</label><input type="number" id="cfg-obj-propio"></div>
+      <div class="form-field"><label>Objetivo propio — real ($)</label><input type="number" id="cfg-obj-real-cfg"></div>
+    </div>
+    <div style="background:#f8f8f6;border-radius:8px;border:1px solid #e0e0d8;padding:10px 14px;margin-top:10px;font-size:13px">
+      <span id="dias-hab-info">—</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarConfig()">Guardar configuración</button>
+    </div>
+  </div>
+  <div class="section-card">
+    <h3>Fuente de datos</h3>
+    <div class="info-box">Los datos se leen automáticamente desde tu Google Sheet cada vez que se abre o actualiza el tablero. Para cargar datos nuevos, pegá el archivo del sistema en la Sheet y hacé click en "Actualizar".</div>
+    <a href="https://docs.google.com/spreadsheets/d/1SKb40QVwGs5OOqxc_jALu15ypLtwGH2oTMQBPT1Qf0o/edit" target="_blank" class="btn btn-secondary">Abrir Google Sheet →</a>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ===== CONFIGURACIÓN =====
+const SHEET_ID = '1SKb40QVwGs5OOqxc_jALu15ypLtwGH2oTMQBPT1Qf0o';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZiKQNP4ZMwTw8EhYhtzFqk6sUOECZWN0ul8vOAgUWVpt8lg9TPcRh-z9uzVnkB7jH/exec';
+const SHEET_NAME = 'Datos';
+const STORE_KEY = 'masele_config_v1';
+
+const MAPEO = {
+  'Asoc. Mutual de empleados de la Policia de Cordoba': 'Mut. Pol. Cba.',
+  'Asociación Mut. del Sind. Único de Recolectores de': 'AMSURRBAC',
+  'APL': 'APL',
+  'UNION ELECTRICA, SOCIEDAD MUTUAL SOCIAL Y DEPORTIV': 'S.U.E',
+  'UNION DE EMPLEADOS DE LA JUSTICIA DE LA NACION': 'UEJ',
+  'Asociacion Mutual Trabajadores Municiapales 3 de A': '3 de Abril',
+  'ASOC  MUT 30 DE OCTUBRE PARA EMPLEADOS Y OBREROS E': '30 de Octubre',
+  'UNION DOCENTES AGREMIADOS PROVINCIALES': 'UDAP',
+};
+
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const FERIADOS = {
+  2025: ['2025-01-01','2025-03-03','2025-03-04','2025-03-24','2025-04-02','2025-04-18','2025-05-01','2025-05-25','2025-06-16','2025-06-20','2025-07-09','2025-08-18','2025-10-12','2025-11-21','2025-12-08','2025-12-25'],
+  2026: ['2026-01-01','2026-02-16','2026-02-17','2026-03-23','2026-03-24','2026-04-02','2026-04-03','2026-05-01','2026-05-25','2026-06-15','2026-06-20','2026-07-09','2026-07-10','2026-08-17','2026-10-12','2026-11-23','2026-12-07','2026-12-08','2026-12-25']
+};
+
+// Config guardada localmente (PE, objetivos, mes)
+let cfg = {
+  mes: 5, anio: 2026,
+  objPropio: 140000000, objPropioReal: 97200000,
+  entidades: [
+    {nombre:'APL', peOps:144, peMonto:100000000},
+    {nombre:'S.U.E', peOps:200, peMonto:50000000},
+    {nombre:'AMSURRBAC', peOps:131, peMonto:150000000},
+    {nombre:'UEJ', peOps:160, peMonto:50000000},
+    {nombre:'UDAP', peOps:0, peMonto:0},
+    {nombre:'30 de Octubre', peOps:0, peMonto:0},
+    {nombre:'3 de Abril', peOps:29, peMonto:30000000},
+    {nombre:'Mut. Pol. Cba.', peOps:255, peMonto:370000000},
+  ]
+};
+
+// Datos calculados desde la Sheet
+let sheetData = [];
+let chartInst = null, chartMode = 'diario';
+
+// ===== UTILS =====
+function fmt(n) { if(!n&&n!==0)return'—'; return'$'+Math.round(n).toLocaleString('es-AR'); }
+function fmtN(n) { return (n||0).toLocaleString('es-AR'); }
+function pct(a,b) { if(!b)return null; return Math.round(a/b*100); }
+function pilCls(p) { if(p===null)return''; if(p>=100)return'pct-ok'; if(p>=80)return'pct-warn'; return'pct-bad'; }
+
+// ===== DÍAS HÁBILES =====
+function calcDiasHabiles(anio, mes) {
+  const feriados = new Set((FERIADOS[anio]||[]).filter(f => {
+    const d = new Date(f+'T12:00:00');
+    return d.getFullYear()===anio && d.getMonth()===mes;
+  }));
+  const hoy = new Date();
+  const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()-1);
+  let total=0, transcurridos=0;
+  const diasEnMes = new Date(anio, mes+1, 0).getDate();
+  for(let d=1; d<=diasEnMes; d++){
+    const fecha = new Date(anio, mes, d);
+    const dow = fecha.getDay();
+    if(dow===0||dow===6) continue;
+    const iso = `${anio}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(feriados.has(iso)) continue;
+    total++;
+    if(fecha<=ayer) transcurridos++;
+  }
+  return {total, transcurridos};
+}
+
+function previsualizarDias() {
+  const mes = +document.getElementById('cfg-mes-num').value;
+  const anio = +document.getElementById('cfg-anio').value;
+  const {total, transcurridos} = calcDiasHabiles(anio, mes);
+  document.getElementById('dias-hab-info').innerHTML =
+    `<b>${MESES_ES[mes]} ${anio}</b> — Días hábiles: <b>${total}</b> totales · <b>${transcurridos}</b> transcurridos · <b>${total-transcurridos}</b> restantes`;
+}
+
+// ===== CARGAR DESDE GOOGLE SHEETS =====
+async function cargarDatos() {
+  document.getElementById('ultima-act').textContent = 'Actualizando...';
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    // Google devuelve JSON envuelto en callback
+    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    const rows = json.table.rows;
+    const cols = json.table.cols.map(c => c.label);
+
+    // Detectar índices de columnas
+    const iEnt   = cols.findIndex(c => c.toLowerCase().includes('entidad'));
+    const iNeto  = cols.findIndex(c => c.toLowerCase().includes('neto'));
+    const iTasa  = cols.findIndex(c => c.toLowerCase() === 'tasa (%)' || c.toLowerCase().includes('tasa'));
+    const iPlazo = cols.findIndex(c => c.toLowerCase().includes('plazo'));
+    const iInt   = cols.findIndex(c => c.toLowerCase().includes('inter'));
+    const iFecha = cols.findIndex(c => c.toLowerCase().includes('operaci') || c.toLowerCase().includes('fecha'));
+
+    if(iEnt<0 || iNeto<0) {
+      mostrarError('No se encontraron las columnas "Entidad" y "Neto" en la Sheet. Verificá los encabezados.');
+      return;
+    }
+
+    sheetData = rows.map(r => ({
+      entidad: r.c[iEnt]?.v || '',
+      neto:    parseFloat(r.c[iNeto]?.v) || 0,
+      tasa:    iTasa>=0  ? parseFloat(r.c[iTasa]?.v)  || 0 : 0,
+      plazo:   iPlazo>=0 ? parseFloat(r.c[iPlazo]?.v) || 0 : 0,
+      interes: iInt>=0   ? parseFloat(r.c[iInt]?.v)   || 0 : 0,
+      fecha:   iFecha>=0 ? (r.c[iFecha]?.v || '') : '',
+    })).filter(r => r.entidad && r.neto > 0);
+
+    const ahora = new Date();
+    document.getElementById('ultima-act').textContent = `Actualizado: ${ahora.getHours()}:${String(ahora.getMinutes()).padStart(2,'0')}`;
+    render();
+  } catch(e) {
+    mostrarError('Error al leer la Google Sheet. Verificá que esté compartida como pública. (' + e.message + ')');
+  }
+}
+
+function mostrarError(msg) {
+  document.getElementById('kpi-row').innerHTML = `<div class="error-box">${msg}</div>`;
+  document.getElementById('ultima-act').textContent = 'Error al cargar';
+}
+
+// ===== CALCULAR TOTALES DESDE SHEET =====
+function calcularEntidades() {
+  const {total: diasTotal, transcurridos: diasTrans} = calcDiasHabiles(cfg.anio, cfg.mes);
+  const result = {};
+
+  sheetData.forEach(row => {
+    const nombre = MAPEO[row.entidad] || row.entidad;
+    if(!result[nombre]) result[nombre] = {ops:0, kneto:0, interes:0, neto_tna:0, neto_plazo:0};
+    result[nombre].ops++;
+    result[nombre].kneto += row.neto;
+    result[nombre].interes += row.interes;
+    result[nombre].neto_tna += row.neto * row.tasa;
+    result[nombre].neto_plazo += row.neto * row.plazo;
+  });
+
+  // Combinar con PE de config
+  const entidades = cfg.entidades.map(e => {
+    const r = result[e.nombre] || {ops:0, kneto:0, interes:0, neto_tna:0, neto_plazo:0};
+    const pp = r.kneto ? Math.round(r.neto_plazo / r.kneto) : 0;
+    const tna = r.kneto ? Math.round(r.neto_tna / r.kneto) : 0;
+    return {...e, ...r, pp, tna};
+  });
+
+  // Agregar entidades de la sheet que no están en config
+  Object.keys(result).forEach(nombre => {
+    if(!entidades.find(e => e.nombre===nombre)) {
+      const r = result[nombre];
+      entidades.push({nombre, peOps:0, peMonto:0, ...r, pp: r.kneto?Math.round(r.neto_plazo/r.kneto):0, tna: r.kneto?Math.round(r.neto_tna/r.kneto):0});
+    }
+  });
+
+  const tot = entidades.reduce((a,e) => ({
+    peOps: a.peOps+e.peOps, peMonto: a.peMonto+e.peMonto,
+    ops: a.ops+e.ops, kneto: a.kneto+e.kneto, interes: a.interes+e.interes,
+    neto_tna: a.neto_tna+e.neto_tna, neto_plazo: a.neto_plazo+e.neto_plazo
+  }), {peOps:0,peMonto:0,ops:0,kneto:0,interes:0,neto_tna:0,neto_plazo:0});
+
+  return {entidades, tot, diasTotal, diasTrans};
+}
+
+// ===== RENDER =====
+function render() {
+  if(!sheetData.length) return;
+  const {entidades, tot, diasTotal, diasTrans} = calcularEntidades();
+  renderKPI(tot, diasTotal, diasTrans);
+  renderTabla(entidades, tot, diasTotal, diasTrans);
+  renderConfig();
+  if(document.getElementById('panel-grafico').classList.contains('active')) renderGrafico();
+}
+
+function renderKPI(tot, dias, trans) {
+  const av = pct(tot.kneto, tot.peMonto);
+  const tTNA = tot.kneto ? Math.round(tot.neto_tna/tot.kneto) : 0;
+  const tPP  = tot.kneto ? Math.round(tot.neto_plazo/tot.kneto) : 0;
+  const opAv = pct(cfg.objPropioReal, cfg.objPropio);
+  const kpis = [
+    {label:'Capital colocado', val:fmt(tot.kneto), sub:'Meta: '+fmt(tot.peMonto), cls:av>=100?'ok':av>=80?'warn':'danger'},
+    {label:'Operaciones', val:fmtN(tot.ops), sub:'Meta: '+fmtN(tot.peOps)+' ops', cls:''},
+    {label:'Cumplimiento general', val:av!==null?(av+'%'):'—', sub:trans+' de '+dias+' días hábiles', cls:av>=100?'ok':av>=80?'warn':'danger'},
+    {label:'TNA pond. s/IVA', val:tTNA+'%', sub:'Promedio ponderado', cls:''},
+    {label:'Plazo pond. (PP)', val:tPP+' cuotas', sub:'Ponderado por capital', cls:''},
+    {label:'Obj. equipo', val:fmt(cfg.objPropioReal), sub:'Meta: '+fmt(cfg.objPropio), cls:opAv>=100?'ok':opAv>=80?'warn':'danger'}
+  ];
+  document.getElementById('kpi-row').innerHTML = kpis.map(k =>
+    `<div class="kpi ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.val}</div><div class="kpi-sub">${k.sub}</div></div>`
+  ).join('');
+  const b = document.getElementById('estado-badge');
+  const a = av||0;
+  b.textContent = a>=100?'Meta alcanzada':a>=80?('Avance '+a+'%'):('Rezagado '+a+'%');
+  b.style.cssText = a>=100?'background:#dcfce7;color:#166534':a>=80?'background:#fef9c3;color:#854d0e':'background:#fee2e2;color:#991b1b';
+  document.getElementById('fecha-display').textContent = MESES_ES[cfg.mes]+' '+cfg.anio+' · Seguimiento diario';
+}
+
+function renderTabla(entidades, tot, dias, trans) {
+  let rows = '';
+  entidades.forEach(e => {
+    const ticket = e.ops ? Math.round(e.kneto/e.ops) : 0;
+    const av = pct(e.kneto, e.peMonto);
+    const pctP = tot.kneto ? Math.round(e.kneto/tot.kneto*100) : 0;
+    const proy = trans ? Math.round((e.kneto/trans)*dias) : 0;
+    rows += `<tr>
+      <td>${e.nombre}</td><td>${e.peOps||'—'}</td><td>${e.peMonto?fmt(e.peMonto):'$0'}</td>
+      <td>${e.ops}</td><td>${fmt(e.kneto)}</td><td>${pctP}%</td>
+      <td>${ticket?fmt(ticket):'—'}</td><td>${e.pp||'—'}</td>
+      <td>${fmt(e.interes)}</td><td>${e.tna?e.tna+'%':'—'}</td>
+      <td>${av!==null?`<span class="pct-pill ${pilCls(av)}">${av}%</span>`:'<span style="color:#aaa">—</span>'}</td>
+      <td>${trans?fmt(proy):'—'}</td>
+    </tr>`;
+  });
+  const tTNA  = tot.kneto ? Math.round(tot.neto_tna/tot.kneto) : 0;
+  const tPP   = tot.kneto ? Math.round(tot.neto_plazo/tot.kneto) : 0;
+  const tProy = trans ? Math.round((tot.kneto/trans)*dias) : 0;
+  const tAv   = pct(tot.kneto, tot.peMonto);
+  rows += `<tr class="total-row">
+    <td>Total</td><td>${tot.peOps}</td><td>${fmt(tot.peMonto)}</td>
+    <td>${tot.ops}</td><td>${fmt(tot.kneto)}</td><td>100%</td>
+    <td>${fmt(tot.ops?Math.round(tot.kneto/tot.ops):0)}</td><td>${tPP}</td>
+    <td>${fmt(tot.interes)}</td><td>${tTNA}%</td>
+    <td>${tAv!==null?`<span class="pct-pill ${pilCls(tAv)}">${tAv}%</span>`:'—'}</td>
+    <td>${fmt(tProy)}</td>
+  </tr>`;
+  document.getElementById('table-body').innerHTML = rows;
+
+  const esp = dias ? Math.round(tot.peMonto/dias) : 0;
+  const real = trans ? Math.round(tot.kneto/trans) : 0;
+  const cp = pct(real, esp);
+  document.getElementById('col-diaria-real').textContent = fmt(real);
+  document.getElementById('col-diaria-esp').textContent = fmt(esp);
+  const cpEl = document.getElementById('col-diaria-pct');
+  cpEl.textContent = cp!==null?(cp+'% vs esperado'):'';
+  cpEl.className = cp>=100?'success':cp>=80?'warn':'danger';
+
+  const op = pct(cfg.objPropioReal, cfg.objPropio);
+  document.getElementById('obj-propio-real').textContent = fmt(cfg.objPropioReal);
+  document.getElementById('obj-propio-meta').textContent = fmt(cfg.objPropio);
+  document.getElementById('obj-real-input').value = cfg.objPropioReal||'';
+  const opEl = document.getElementById('obj-propio-pct');
+  opEl.textContent = op!==null?(op+'% alcanzado'):'';
+  opEl.className = op>=100?'success':op>=80?'warn':'danger';
+}
+
+function renderGrafico() {
+  if(!window.Chart || !sheetData.length) return;
+  const ctx = document.getElementById('chart-main').getContext('2d');
+  if(chartInst){chartInst.destroy();chartInst=null;}
+
+  if(chartMode==='diario') {
+    const byF = {};
+    sheetData.forEach(r => {
+      const f = r.fecha ? String(r.fecha).slice(0,10) : 'Sin fecha';
+      byF[f] = (byF[f]||0) + r.neto;
+    });
+    const labels = Object.keys(byF).sort();
+    chartInst = new Chart(ctx, {type:'bar', data:{labels, datasets:[{label:'Capital (M$)', data:labels.map(l=>Math.round(byF[l]/1000000*100)/100), backgroundColor:'#2a78d6', borderRadius:4}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+v+'M'}}}}});
+  } else if(chartMode==='acumulado') {
+    const byF = {};
+    sheetData.forEach(r => { const f = r.fecha?String(r.fecha).slice(0,10):'Sin fecha'; byF[f]=(byF[f]||0)+r.neto; });
+    const labels = Object.keys(byF).sort(); let acc=0;
+    const {tot} = calcularEntidades(); const meta = tot.peMonto/1000000;
+    chartInst = new Chart(ctx, {type:'line', data:{labels, datasets:[
+      {label:'Acumulado (M$)', data:labels.map(l=>{acc+=byF[l];return Math.round(acc/1000000*100)/100;}), borderColor:'#2a78d6', backgroundColor:'rgba(42,120,214,0.08)', borderWidth:2, tension:0.3, pointRadius:4},
+      {label:'Meta (M$)', data:labels.map(()=>Math.round(meta*100)/100), borderColor:'#dc2626', borderDash:[5,4], borderWidth:1.5, pointRadius:0}
+    ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, labels:{boxWidth:10, font:{size:11}}}}, scales:{y:{ticks:{callback:v=>'$'+v+'M'}}}}});
+  } else {
+    const byE = {};
+    sheetData.forEach(r => { const n=MAPEO[r.entidad]||r.entidad; byE[n]=(byE[n]||0)+r.neto; });
+    const labels = Object.keys(byE);
+    const colors = ['#2a78d6','#1baf7a','#eda100','#008300','#4a3aa7','#e34948','#e87ba4','#eb6834'];
+    chartInst = new Chart(ctx, {type:'bar', data:{labels, datasets:[{label:'Capital (M$)', data:labels.map(l=>Math.round(byE[l]/1000000*100)/100), backgroundColor:labels.map((_,i)=>colors[i%colors.length]), borderRadius:4}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+v+'M'}}}}});
+  }
+}
+
+function switchChart(mode, el) {
+  chartMode = mode;
+  document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderGrafico();
+}
+
+function renderConfig() {
+  document.getElementById('config-body').innerHTML = cfg.entidades.map((e,i) => `<tr>
+    <td style="border:1px solid #e0e0d8;padding:5px 8px"><input type="text" value="${e.nombre}" onchange="cfg.entidades[${i}].nombre=this.value" style="width:130px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit"></td>
+    <td style="border:1px solid #e0e0d8;padding:5px 8px;text-align:right"><input type="number" value="${e.peOps}" onchange="cfg.entidades[${i}].peOps=+this.value" style="width:70px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit;text-align:right"></td>
+    <td style="border:1px solid #e0e0d8;padding:5px 8px;text-align:right"><input type="number" value="${e.peMonto}" onchange="cfg.entidades[${i}].peMonto=+this.value" style="width:130px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit;text-align:right"></td>
+    <td style="border:1px solid #e0e0d8;padding:5px 8px"><button class="btn-danger-sm" onclick="cfg.entidades.splice(${i},1);guardarCfg();renderConfig()">✕</button></td>
+  </tr>`).join('');
+  document.getElementById('cfg-mes-num').value = cfg.mes;
+  document.getElementById('cfg-anio').value = cfg.anio;
+  document.getElementById('cfg-obj-propio').value = cfg.objPropio;
+  document.getElementById('cfg-obj-real-cfg').value = cfg.objPropioReal;
+  previsualizarDias();
+}
+
+function agregarEntidad() {
+  cfg.entidades.push({nombre:'Nueva entidad', peOps:0, peMonto:0});
+  guardarCfg(); renderConfig();
+}
+
+function guardarConfig() {
+  cfg.mes = +document.getElementById('cfg-mes-num').value;
+  cfg.anio = +document.getElementById('cfg-anio').value;
+  cfg.objPropio = +document.getElementById('cfg-obj-propio').value||0;
+  cfg.objPropioReal = +document.getElementById('cfg-obj-real-cfg').value||0;
+  guardarCfg(); render(); switchTab('tabla');
+}
+
+function actualizarObjReal() {
+  const val = +document.getElementById('obj-real-input').value;
+  if(!val&&val!==0) return;
+  cfg.objPropioReal = val;
+  guardarCfg(); render();
+}
+
+function guardarCfg() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch(e){}
+}
+
+function switchTab(t) {
+  const tabs = ['tabla','grafico','config'];
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',tabs[i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  if(t==='grafico') renderGrafico();
+}
+
+// ===== EXPORTAR CSV =====
+function exportarCSV() {
+  if(!sheetData.length) { alert('No hay datos cargados.'); return; }
+  const {entidades, tot, diasTotal, diasTrans} = calcularEntidades();
+  const cols = ['Entidad','PE #','PE $','Real #','K neto','% Part.','Ticket prom.','PP','Interés s/IVA','TNA','Cumplimiento','Proyección'];
+  const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  let csv = cols.map(esc).join(';')+'\n';
+  entidades.forEach(e => {
+    const ticket = e.ops?Math.round(e.kneto/e.ops):0;
+    const av = pct(e.kneto,e.peMonto);
+    const pctP = tot.kneto?Math.round(e.kneto/tot.kneto*100):0;
+    const proy = diasTrans?Math.round((e.kneto/diasTrans)*diasTotal):0;
+    csv += [e.nombre,e.peOps||0,e.peMonto||0,e.ops||0,e.kneto||0,pctP+'%',ticket||0,e.pp||0,e.interes||0,(e.tna||0)+'%',av!==null?(av+'%'):'',proy||0].map(esc).join(';')+'\n';
+  });
+  const tTNA=tot.kneto?Math.round(tot.neto_tna/tot.kneto):0;
+  const tPP=tot.kneto?Math.round(tot.neto_plazo/tot.kneto):0;
+  const tProy=diasTrans?Math.round((tot.kneto/diasTrans)*diasTotal):0;
+  const tAv=pct(tot.kneto,tot.peMonto);
+  csv += ['TOTAL',tot.peOps,tot.peMonto,tot.ops,tot.kneto,'100%',tot.ops?Math.round(tot.kneto/tot.ops):0,tPP,tot.interes,tTNA+'%',tAv!==null?(tAv+'%'):'',tProy].map(esc).join(';')+'\n';
+  csv += '\n';
+  csv += [esc('Objetivo propio — meta'),'','','','',esc(cfg.objPropio)].join(';')+'\n';
+  csv += [esc('Objetivo propio — real'),'','','','',esc(cfg.objPropioReal)].join(';')+'\n';
+  const pctObj=cfg.objPropio?Math.round(cfg.objPropioReal/cfg.objPropio*100):0;
+  csv += [esc('Objetivo propio — %'),'','','','',esc(pctObj+'%')].join(';')+'\n';
+  const mes = MESES_ES[cfg.mes]+'_'+cfg.anio;
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download = 'Masele_'+mes+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ===== IMPORTAR DOCUMENT.XLSX =====
+const MAPEO_COLS = {
+  entidad: ['entidad'],
+  neto:    ['neto'],
+  tasa:    ['tasa (%)','tasa'],
+  plazo:   ['plazo'],
+  interes: ['interés','interes','interés s/iva'],
+  fecha:   ['f. operación','f. operacion','fecha'],
+  estado:  ['estado'],
+};
+
+function importarXLSX(input) {
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('ultima-act').textContent = 'Leyendo archivo...';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      // Parsear XLSX manualmente — formato ZIP con XML interno
+      // Usamos la API de Google Sheets para leer el archivo via conversión
+      // En su lugar parseamos el CSV que podemos generar internamente
+      
+      // Leer como texto para detectar si es CSV
+      const arr = new Uint8Array(e.target.result);
+      
+      // Parsear XLSX usando estructura básica
+      const rows = await parsearXLSX(arr);
+      if(!rows || rows.length < 2) {
+        document.getElementById('ultima-act').textContent = 'Error: archivo vacío';
+        alert('No se encontraron datos en el archivo.');
+        return;
+      }
+
+      // Detectar columnas
+      const headers = rows[0].map(h => String(h||'').toLowerCase().trim());
+      const idx = {};
+      Object.entries(MAPEO_COLS).forEach(([key, posibles]) => {
+        idx[key] = posibles.reduce((found, p) => found>=0 ? found : headers.findIndex(h=>h.includes(p)), -1);
+      });
+
+      if(idx.entidad < 0 || idx.neto < 0) {
+        alert('No se encontraron las columnas requeridas. Verificá que sea el archivo Document.xlsx correcto.');
+        document.getElementById('ultima-act').textContent = 'Error de formato';
+        return;
+      }
+
+      // Extraer solo las columnas necesarias
+      const datos = [];
+      // Encabezados para la Sheet
+      datos.push(['Entidad','Neto','Tasa (%)','Plazo','Interés','F. Operación','Estado']);
+      
+      for(let i=1; i<rows.length; i++) {
+        const row = rows[i];
+        const entidad = String(row[idx.entidad]||'').trim();
+        const neto = parseFloat(row[idx.neto]) || 0;
+        if(!entidad || neto === 0) continue;
+        datos.push([
+          entidad,
+          neto,
+          idx.tasa>=0    ? (parseFloat(row[idx.tasa])||0)    : 0,
+          idx.plazo>=0   ? (parseFloat(row[idx.plazo])||0)   : 0,
+          idx.interes>=0 ? (parseFloat(row[idx.interes])||0) : 0,
+          idx.fecha>=0   ? String(row[idx.fecha]||'')        : '',
+          idx.estado>=0  ? String(row[idx.estado]||'')       : '',
+        ]);
+      }
+
+      document.getElementById('ultima-act').textContent = `Subiendo ${datos.length-1} filas...`;
+
+      // Enviar al Google Apps Script
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(datos),
+        headers: {'Content-Type': 'application/json'},
+        mode: 'no-cors'
+      });
+
+      // no-cors no devuelve respuesta legible, esperamos y recargamos
+      document.getElementById('ultima-act').textContent = 'Datos enviados, actualizando...';
+      setTimeout(() => cargarDatos(), 3000);
+
+    } catch(err) {
+      document.getElementById('ultima-act').textContent = 'Error: ' + err.message;
+      alert('Error al procesar el archivo: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function parsearXLSX(arr) {
+  // Descomprimir ZIP y parsear el XML de la hoja
+  // Usamos DecompressionStream si está disponible (Chrome 80+)
+  try {
+    const { entries } = await unzipXLSX(arr);
+    
+    // Buscar la primera hoja
+    const sheetEntry = entries.find(e => e.name.match(/xl\/worksheets\/sheet1/));
+    const sharedEntry = entries.find(e => e.name === 'xl/sharedStrings.xml');
+    
+    if(!sheetEntry) throw new Error('No se encontró la hoja en el archivo');
+    
+    const sheetXML = new TextDecoder().decode(sheetEntry.data);
+    const sharedXML = sharedEntry ? new TextDecoder().decode(sharedEntry.data) : '';
+    
+    // Parsear strings compartidos
+    const strings = [];
+    const siMatches = sharedXML.matchAll(/<si>[\s\S]*?<\/si>/g);
+    for(const m of siMatches) {
+      const tMatches = [...m[0].matchAll(/<t[^>]*>([^<]*)<\/t>/g)];
+      strings.push(tMatches.map(t=>t[1]).join(''));
+    }
+    
+    // Parsear celdas
+    const rows = {};
+    const cellMatches = sheetXML.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*)>[\s\S]*?(?:<v>([^<]*)<\/v>)?[\s\S]*?<\/c>/g);
+    for(const m of cellMatches) {
+      const col = m[1], rowNum = parseInt(m[2]), attrs = m[3], val = m[4]||'';
+      if(!rows[rowNum]) rows[rowNum] = {};
+      const colIdx = col.split('').reduce((a,c)=>a*26+c.charCodeAt(0)-64,0) - 1;
+      // Si es string compartido
+      if(attrs.includes('t="s"')) {
+        rows[rowNum][colIdx] = strings[parseInt(val)] || '';
+      } else if(attrs.includes('t="str"') || attrs.includes('t="inlineStr"')) {
+        rows[rowNum][colIdx] = val;
+      } else {
+        rows[rowNum][colIdx] = isNaN(val) || val==='' ? val : parseFloat(val);
+      }
+    }
+    
+    const maxRow = Math.max(...Object.keys(rows).map(Number));
+    const maxCol = Math.max(...Object.values(rows).flatMap(r=>Object.keys(r).map(Number))) + 1;
+    
+    const result = [];
+    for(let r=1; r<=maxRow; r++) {
+      const row = [];
+      for(let c=0; c<maxCol; c++) row.push(rows[r]?.[c]??'');
+      if(row.some(v=>v!=='')) result.push(row);
+    }
+    return result;
+  } catch(e) {
+    throw new Error('No se pudo leer el archivo XLSX: ' + e.message);
+  }
+}
+
+async function unzipXLSX(arr) {
+  // Parser ZIP mínimo
+  const view = new DataView(arr.buffer || arr);
+  const entries = [];
+  let i = 0;
+  while(i < arr.length - 4) {
+    if(view.getUint32(i, true) !== 0x04034b50) { i++; continue; }
+    const flags      = view.getUint16(i+6, true);
+    const compression= view.getUint16(i+8, true);
+    const compSize   = view.getUint32(i+18, true);
+    const nameLen    = view.getUint16(i+26, true);
+    const extraLen   = view.getUint16(i+28, true);
+    const name       = new TextDecoder().decode(arr.slice(i+30, i+30+nameLen));
+    const dataStart  = i+30+nameLen+extraLen;
+    const compData   = arr.slice(dataStart, dataStart+compSize);
+    
+    let data;
+    if(compression === 0) {
+      data = compData;
+    } else if(compression === 8) {
+      try {
+        const ds = new DecompressionStream('deflate-raw');
+        const writer = ds.writable.getWriter();
+        const reader = ds.readable.getReader();
+        writer.write(compData);
+        writer.close();
+        const chunks = [];
+        while(true) {
+          const {done, value} = await reader.read();
+          if(done) break;
+          chunks.push(value);
+        }
+        const total = chunks.reduce((a,c)=>a+c.length,0);
+        data = new Uint8Array(total);
+        let off=0;
+        chunks.forEach(c=>{data.set(c,off);off+=c.length;});
+      } catch(e) { data = compData; }
+    } else { data = compData; }
+    
+    entries.push({name, data});
+    i = dataStart + compSize;
+  }
+  return {entries};
+}
+
+// ===== INIT =====
+try {
+  const s = localStorage.getItem(STORE_KEY);
+  if(s) cfg = {...cfg, ...JSON.parse(s)};
+} catch(e){}
+
+renderConfig();
+cargarDatos();
+</script>
+</body>
+</html>
