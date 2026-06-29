@@ -163,7 +163,7 @@ h3{font-size:10.5px;font-weight:700;color:var(--verde-oscuro);text-transform:upp
     <div class="foot-card">
       <div class="foot-card-title">Objetivo propio del equipo</div>
       <div class="foot-val" id="obj-propio-real">—</div>
-      <div class="foot-sub"><span>Meta: <b id="obj-propio-meta">—</b></span><span id="obj-propio-pct"></span></div>
+      <div class="foot-sub"><span>Objetivo: <b id="obj-propio-meta">—</b></span><span id="obj-propio-pct"></span></div>
       <div class="foot-edit">
         <input type="number" id="obj-real-input" placeholder="Real acumulado $">
         <button class="btn btn-secondary" style="font-size:12px;padding:5px 11px" onclick="actualizarObjReal()">Actualizar</button>
@@ -222,7 +222,7 @@ h3{font-size:10.5px;font-weight:700;color:var(--verde-oscuro);text-transform:upp
           <option value="2025">2025</option><option value="2026" selected>2026</option>
         </select>
       </div>
-      <div class="form-field"><label>Objetivo propio — meta ($)</label><input type="number" id="cfg-obj-propio"></div>
+      <div class="form-field"><label>Objetivo propio ($)</label><input type="number" id="cfg-obj-propio"></div>
       <div class="form-field"><label>Objetivo propio — real ($)</label><input type="number" id="cfg-obj-real-cfg"></div>
     </div>
     <div style="background:#f8f8f6;border-radius:8px;border:1px solid #e0e0d8;padding:10px 14px;margin-top:10px;font-size:13px">
@@ -425,19 +425,19 @@ function renderKPI(tot, dias, trans) {
   const tPP  = tot.kneto ? Math.round(tot.neto_plazo/tot.kneto) : 0;
   const opAv = pct(cfg.objPropioReal, cfg.objPropio);
   const kpis = [
-    {label:'Capital colocado', val:fmt(tot.kneto), sub:'Meta: '+fmt(tot.peMonto), cls:av>=100?'ok':av>=80?'warn':'danger'},
-    {label:'Operaciones', val:fmtN(tot.ops), sub:'Meta: '+fmtN(tot.peOps)+' ops', cls:''},
+    {label:'Capital colocado', val:fmt(tot.kneto), sub:'Objetivo: '+fmt(tot.peMonto), cls:av>=100?'ok':av>=80?'warn':'danger'},
+    {label:'Operaciones', val:fmtN(tot.ops), sub:'Objetivo: '+fmtN(tot.peOps)+' ops', cls:''},
     {label:'Cumplimiento general', val:av!==null?(av+'%'):'—', sub:trans+' de '+dias+' días hábiles', cls:av>=100?'ok':av>=80?'warn':'danger'},
     {label:'TNA pond. s/IVA', val:tTNA+'%', sub:'Promedio ponderado', cls:''},
     {label:'Plazo pond. (PP)', val:tPP+' cuotas', sub:'Ponderado por capital', cls:''},
-    {label:'Obj. equipo', val:fmt(cfg.objPropioReal), sub:'Meta: '+fmt(cfg.objPropio), cls:opAv>=100?'ok':opAv>=80?'warn':'danger'}
+    {label:'Obj. equipo', val:fmt(cfg.objPropioReal), sub:'Objetivo: '+fmt(cfg.objPropio), cls:opAv>=100?'ok':opAv>=80?'warn':'danger'}
   ];
   document.getElementById('kpi-row').innerHTML = kpis.map(k =>
     `<div class="kpi ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.val}</div><div class="kpi-sub">${k.sub}</div></div>`
   ).join('');
   const b = document.getElementById('estado-badge');
   const a = av||0;
-  b.textContent = a>=100?'Meta alcanzada':a>=80?('Avance '+a+'%'):('Rezagado '+a+'%');
+  b.textContent = a>=100?'Objetivo alcanzado':a>=80?('Avance '+a+'%'):('Rezagado '+a+'%');
   b.style.cssText = a>=100?'background:#d1fae5;color:#065f46':a>=80?'background:#fef3c7;color:#92400e':'background:#fee2e2;color:#991b1b';
   document.getElementById('fecha-display').textContent = MESES_ES[cfg.mes]+' '+cfg.anio+' · Seguimiento diario';
 }
@@ -594,7 +594,7 @@ function exportarCSV() {
   const tAv=pct(tot.kneto,tot.peMonto);
   csv += ['TOTAL',tot.peOps,tot.peMonto,tot.ops,tot.kneto,'100%',tot.ops?Math.round(tot.kneto/tot.ops):0,tPP,tot.interes,tTNA+'%',tAv!==null?(tAv+'%'):'',tProy].map(esc).join(';')+'\n';
   csv += '\n';
-  csv += [esc('Objetivo propio — meta'),'','','','',esc(cfg.objPropio)].join(';')+'\n';
+  csv += [esc('Objetivo propio'),'','','','',esc(cfg.objPropio)].join(';')+'\n';
   csv += [esc('Objetivo propio — real'),'','','','',esc(cfg.objPropioReal)].join(';')+'\n';
   const pctObj=cfg.objPropio?Math.round(cfg.objPropioReal/cfg.objPropio*100):0;
   csv += [esc('Objetivo propio — %'),'','','','',esc(pctObj+'%')].join(';')+'\n';
