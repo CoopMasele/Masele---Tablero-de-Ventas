@@ -93,7 +93,11 @@ h3{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spa
   <div class="header-right">
     <span id="ultima-act" style="font-size:11px;color:#888"></span>
     <span class="badge" id="estado-badge" style="background:#e0e0d8;color:#555">—</span>
-    <button class="btn btn-primary" onclick="cargarDatos()">↺ Actualizar</button>
+    <label class="btn btn-primary" style="cursor:pointer">
+      ⬆ Importar Document.xlsx
+      <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none" onchange="importarXLSX(this)">
+    </label>
+    <button class="btn btn-secondary" onclick="cargarDatos()">↺ Actualizar</button>
     <button class="btn btn-success" onclick="exportarCSV()">⬇ Exportar CSV</button>
   </div>
 </div>
@@ -215,6 +219,7 @@ h3{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spa
 <script>
 // ===== CONFIGURACIÓN =====
 const SHEET_ID = '1SKb40QVwGs5OOqxc_jALu15ypLtwGH2oTMQBPT1Qf0o';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZiKQNP4ZMwTw8EhYhtzFqk6sUOECZWN0ul8vOAgUWVpt8lg9TPcRh-z9uzVnkB7jH/exec';
 const SHEET_NAME = 'Datos';
 const STORE_KEY = 'masele_config_v1';
 
@@ -573,6 +578,197 @@ function exportarCSV() {
   a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
   a.download = 'Masele_'+mes+'.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ===== IMPORTAR DOCUMENT.XLSX =====
+const MAPEO_COLS = {
+  entidad: ['entidad'],
+  neto:    ['neto'],
+  tasa:    ['tasa (%)','tasa'],
+  plazo:   ['plazo'],
+  interes: ['interés','interes','interés s/iva'],
+  fecha:   ['f. operación','f. operacion','fecha'],
+  estado:  ['estado'],
+};
+
+function importarXLSX(input) {
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('ultima-act').textContent = 'Leyendo archivo...';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      // Parsear XLSX manualmente — formato ZIP con XML interno
+      // Usamos la API de Google Sheets para leer el archivo via conversión
+      // En su lugar parseamos el CSV que podemos generar internamente
+      
+      // Leer como texto para detectar si es CSV
+      const arr = new Uint8Array(e.target.result);
+      
+      // Parsear XLSX usando estructura básica
+      const rows = await parsearXLSX(arr);
+      if(!rows || rows.length < 2) {
+        document.getElementById('ultima-act').textContent = 'Error: archivo vacío';
+        alert('No se encontraron datos en el archivo.');
+        return;
+      }
+
+      // Detectar columnas
+      const headers = rows[0].map(h => String(h||'').toLowerCase().trim());
+      const idx = {};
+      Object.entries(MAPEO_COLS).forEach(([key, posibles]) => {
+        idx[key] = posibles.reduce((found, p) => found>=0 ? found : headers.findIndex(h=>h.includes(p)), -1);
+      });
+
+      if(idx.entidad < 0 || idx.neto < 0) {
+        alert('No se encontraron las columnas requeridas. Verificá que sea el archivo Document.xlsx correcto.');
+        document.getElementById('ultima-act').textContent = 'Error de formato';
+        return;
+      }
+
+      // Extraer solo las columnas necesarias
+      const datos = [];
+      // Encabezados para la Sheet
+      datos.push(['Entidad','Neto','Tasa (%)','Plazo','Interés','F. Operación','Estado']);
+      
+      for(let i=1; i<rows.length; i++) {
+        const row = rows[i];
+        const entidad = String(row[idx.entidad]||'').trim();
+        const neto = parseFloat(row[idx.neto]) || 0;
+        if(!entidad || neto === 0) continue;
+        datos.push([
+          entidad,
+          neto,
+          idx.tasa>=0    ? (parseFloat(row[idx.tasa])||0)    : 0,
+          idx.plazo>=0   ? (parseFloat(row[idx.plazo])||0)   : 0,
+          idx.interes>=0 ? (parseFloat(row[idx.interes])||0) : 0,
+          idx.fecha>=0   ? String(row[idx.fecha]||'')        : '',
+          idx.estado>=0  ? String(row[idx.estado]||'')       : '',
+        ]);
+      }
+
+      document.getElementById('ultima-act').textContent = `Subiendo ${datos.length-1} filas...`;
+
+      // Enviar al Google Apps Script
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(datos),
+        headers: {'Content-Type': 'application/json'},
+        mode: 'no-cors'
+      });
+
+      // no-cors no devuelve respuesta legible, esperamos y recargamos
+      document.getElementById('ultima-act').textContent = 'Datos enviados, actualizando...';
+      setTimeout(() => cargarDatos(), 3000);
+
+    } catch(err) {
+      document.getElementById('ultima-act').textContent = 'Error: ' + err.message;
+      alert('Error al procesar el archivo: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function parsearXLSX(arr) {
+  // Descomprimir ZIP y parsear el XML de la hoja
+  // Usamos DecompressionStream si está disponible (Chrome 80+)
+  try {
+    const { entries } = await unzipXLSX(arr);
+    
+    // Buscar la primera hoja
+    const sheetEntry = entries.find(e => e.name.match(/xl\/worksheets\/sheet1/));
+    const sharedEntry = entries.find(e => e.name === 'xl/sharedStrings.xml');
+    
+    if(!sheetEntry) throw new Error('No se encontró la hoja en el archivo');
+    
+    const sheetXML = new TextDecoder().decode(sheetEntry.data);
+    const sharedXML = sharedEntry ? new TextDecoder().decode(sharedEntry.data) : '';
+    
+    // Parsear strings compartidos
+    const strings = [];
+    const siMatches = sharedXML.matchAll(/<si>[\s\S]*?<\/si>/g);
+    for(const m of siMatches) {
+      const tMatches = [...m[0].matchAll(/<t[^>]*>([^<]*)<\/t>/g)];
+      strings.push(tMatches.map(t=>t[1]).join(''));
+    }
+    
+    // Parsear celdas
+    const rows = {};
+    const cellMatches = sheetXML.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*)>[\s\S]*?(?:<v>([^<]*)<\/v>)?[\s\S]*?<\/c>/g);
+    for(const m of cellMatches) {
+      const col = m[1], rowNum = parseInt(m[2]), attrs = m[3], val = m[4]||'';
+      if(!rows[rowNum]) rows[rowNum] = {};
+      const colIdx = col.split('').reduce((a,c)=>a*26+c.charCodeAt(0)-64,0) - 1;
+      // Si es string compartido
+      if(attrs.includes('t="s"')) {
+        rows[rowNum][colIdx] = strings[parseInt(val)] || '';
+      } else if(attrs.includes('t="str"') || attrs.includes('t="inlineStr"')) {
+        rows[rowNum][colIdx] = val;
+      } else {
+        rows[rowNum][colIdx] = isNaN(val) || val==='' ? val : parseFloat(val);
+      }
+    }
+    
+    const maxRow = Math.max(...Object.keys(rows).map(Number));
+    const maxCol = Math.max(...Object.values(rows).flatMap(r=>Object.keys(r).map(Number))) + 1;
+    
+    const result = [];
+    for(let r=1; r<=maxRow; r++) {
+      const row = [];
+      for(let c=0; c<maxCol; c++) row.push(rows[r]?.[c]??'');
+      if(row.some(v=>v!=='')) result.push(row);
+    }
+    return result;
+  } catch(e) {
+    throw new Error('No se pudo leer el archivo XLSX: ' + e.message);
+  }
+}
+
+async function unzipXLSX(arr) {
+  // Parser ZIP mínimo
+  const view = new DataView(arr.buffer || arr);
+  const entries = [];
+  let i = 0;
+  while(i < arr.length - 4) {
+    if(view.getUint32(i, true) !== 0x04034b50) { i++; continue; }
+    const flags      = view.getUint16(i+6, true);
+    const compression= view.getUint16(i+8, true);
+    const compSize   = view.getUint32(i+18, true);
+    const nameLen    = view.getUint16(i+26, true);
+    const extraLen   = view.getUint16(i+28, true);
+    const name       = new TextDecoder().decode(arr.slice(i+30, i+30+nameLen));
+    const dataStart  = i+30+nameLen+extraLen;
+    const compData   = arr.slice(dataStart, dataStart+compSize);
+    
+    let data;
+    if(compression === 0) {
+      data = compData;
+    } else if(compression === 8) {
+      try {
+        const ds = new DecompressionStream('deflate-raw');
+        const writer = ds.writable.getWriter();
+        const reader = ds.readable.getReader();
+        writer.write(compData);
+        writer.close();
+        const chunks = [];
+        while(true) {
+          const {done, value} = await reader.read();
+          if(done) break;
+          chunks.push(value);
+        }
+        const total = chunks.reduce((a,c)=>a+c.length,0);
+        data = new Uint8Array(total);
+        let off=0;
+        chunks.forEach(c=>{data.set(c,off);off+=c.length;});
+      } catch(e) { data = compData; }
+    } else { data = compData; }
+    
+    entries.push({name, data});
+    i = dataStart + compSize;
+  }
+  return {entries};
 }
 
 // ===== INIT =====
