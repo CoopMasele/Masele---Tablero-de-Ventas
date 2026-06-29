@@ -607,18 +607,12 @@ function exportarCSV() {
 
 // ===== IMPORTAR DESDE DRIVE VIA SCRIPT =====
 async function procesarDesdeDrive() {
-  document.getElementById('ultima-act').textContent = 'Procesando archivo...';
-  try {
-    const url = SCRIPT_URL + '?t=' + Date.now();
-    const res = await fetch(url, { mode: 'no-cors' });
-    // no-cors no devuelve respuesta legible — esperamos y recargamos
-    document.getElementById('ultima-act').textContent = 'Procesando... actualizando en 5 segundos';
-    setTimeout(() => cargarDatos(), 5000);
-  } catch(e) {
-    // Con no-cors siempre da error de red pero el script igual se ejecuta
-    document.getElementById('ultima-act').textContent = 'Procesando... actualizando en 5 segundos';
-    setTimeout(() => cargarDatos(), 5000);
-  }
+  document.getElementById('ultima-act').textContent = 'Procesando...';
+  // Abrir el script en una pestaña nueva — evita bloqueos CORS
+  window.open(SCRIPT_URL, '_blank');
+  // Esperar y recargar datos
+  document.getElementById('ultima-act').textContent = 'Actualizando en 8 segundos...';
+  setTimeout(() => cargarDatos(), 8000);
 }
 
 
