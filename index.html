@@ -398,7 +398,16 @@ function calcularEntidades() {
   let fechaMaxDatos = null;
   sheetData.forEach(row => {
     if (!row.fecha) return;
-    const f = row.fecha instanceof Date ? row.fecha : new Date(row.fecha);
+    let f;
+    if (row.fecha instanceof Date) {
+      f = row.fecha;
+    } else if (typeof row.fecha === 'string' && row.fecha.startsWith('Date(')) {
+      // Formato Google Sheets: Date(2026,5,29)
+      const parts = row.fecha.replace('Date(','').replace(')','').split(',');
+      f = new Date(+parts[0], +parts[1], +parts[2]);
+    } else {
+      f = new Date(row.fecha);
+    }
     if (!isNaN(f) && (!fechaMaxDatos || f > fechaMaxDatos)) fechaMaxDatos = f;
   });
 
