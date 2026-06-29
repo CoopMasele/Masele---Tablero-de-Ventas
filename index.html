@@ -80,7 +80,7 @@ td:first-child{text-align:left;font-weight:600;color:var(--negro)}
 .foot-val{font-size:20px;font-weight:700;color:var(--negro)}
 .foot-sub{display:flex;gap:16px;margin-top:5px;font-size:11px;color:var(--gris-texto);flex-wrap:wrap}
 .foot-edit{display:flex;align-items:center;gap:8px;margin-top:10px}
-.foot-edit input{font-size:12px;padding:6px 10px;width:170px;border:1px solid var(--gris-borde);border-radius:5px;font-family:inherit;color:var(--negro)}
+.foot-edit input{font-size:12px;padding:6px 10px;width:120px;border:1px solid var(--gris-borde);border-radius:5px;font-family:inherit;color:var(--negro)}
 
 /* FORM */
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin-bottom:14px}
@@ -166,7 +166,7 @@ h3{font-size:10.5px;font-weight:700;color:var(--verde-oscuro);text-transform:upp
       <div class="foot-sub"><span>Objetivo: <b id="obj-propio-meta">—</b></span><span id="obj-propio-pct"></span></div>
       <div class="foot-edit">
         <input type="number" id="obj-real-input" placeholder="Real acumulado $">
-        <button class="btn btn-secondary" style="font-size:12px;padding:5px 11px" onclick="actualizarObjReal()">Actualizar</button>
+        <button class="btn btn-primary" style="font-size:12px;padding:5px 11px" onclick="actualizarObjReal()">Actualizar</button>
       </div>
     </div>
   </div>
@@ -314,6 +314,26 @@ function calcDiasHabiles(anio, mes) {
   return {total, transcurridos};
 }
 
+function calcDiasHabilesHasta(anio, mes, fechaLimite) {
+  const feriados = new Set((FERIADOS[anio]||[]).filter(f => {
+    const d = new Date(f+'T12:00:00');
+    return d.getFullYear()===anio && d.getMonth()===mes;
+  }));
+  const limite = new Date(fechaLimite.getFullYear(), fechaLimite.getMonth(), fechaLimite.getDate());
+  let total=0, transcurridos=0;
+  const diasEnMes = new Date(anio, mes+1, 0).getDate();
+  for(let d=1; d<=diasEnMes; d++){
+    const fecha = new Date(anio, mes, d);
+    const dow = fecha.getDay();
+    if(dow===0||dow===6) continue;
+    const iso = `${anio}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(feriados.has(iso)) continue;
+    total++;
+    if(fecha<=limite) transcurridos++;
+  }
+  return {total, transcurridos};
+}
+
 function previsualizarDias() {
   const mes = +document.getElementById('cfg-mes-num').value;
   const anio = +document.getElementById('cfg-anio').value;
@@ -374,6 +394,22 @@ function calcularEntidades() {
   const {total: diasTotal, transcurridos: diasTrans} = calcDiasHabiles(cfg.anio, cfg.mes);
   const result = {};
 
+  // Detectar fecha más reciente en los datos
+  let fechaMaxDatos = null;
+  sheetData.forEach(row => {
+    if (!row.fecha) return;
+    const f = row.fecha instanceof Date ? row.fecha : new Date(row.fecha);
+    if (!isNaN(f) && (!fechaMaxDatos || f > fechaMaxDatos)) fechaMaxDatos = f;
+  });
+
+  // Recalcular días transcurridos hasta la fecha más reciente de los datos
+  let diasTransEfectivos = diasTrans;
+  if (fechaMaxDatos) {
+    const {transcurridos} = calcDiasHabilesHasta(cfg.anio, cfg.mes, fechaMaxDatos);
+    diasTransEfectivos = transcurridos;
+  }
+  const result = {};
+
   sheetData.forEach(row => {
     const nombre = MAPEO[row.entidad] || row.entidad;
     if(!result[nombre]) result[nombre] = {ops:0, kneto:0, interes:0, neto_tna:0, neto_plazo:0};
@@ -406,7 +442,7 @@ function calcularEntidades() {
     neto_tna: a.neto_tna+e.neto_tna, neto_plazo: a.neto_plazo+e.neto_plazo
   }), {peOps:0,peMonto:0,ops:0,kneto:0,interes:0,neto_tna:0,neto_plazo:0});
 
-  return {entidades, tot, diasTotal, diasTrans};
+  return {entidades, tot, diasTotal, diasTrans: diasTransEfectivos};
 }
 
 // ===== RENDER =====
