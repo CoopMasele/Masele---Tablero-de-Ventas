@@ -93,9 +93,8 @@ h3{font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spa
   <div class="header-right">
     <span id="ultima-act" style="font-size:11px;color:#888"></span>
     <span class="badge" id="estado-badge" style="background:#e0e0d8;color:#555">—</span>
-    <label class="btn btn-primary" style="cursor:pointer">
+    <label class="btn btn-primary" style="cursor:pointer" onclick="procesarDesdeDrive()">
       ⬆ Importar Document.xlsx
-      <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none" onchange="importarXLSX(this)">
     </label>
     <button class="btn btn-secondary" onclick="cargarDatos()">↺ Actualizar</button>
     <button class="btn btn-success" onclick="exportarCSV()">⬇ Exportar CSV</button>
@@ -580,7 +579,23 @@ function exportarCSV() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-// ===== IMPORTAR DOCUMENT.XLSX =====
+// ===== IMPORTAR DESDE DRIVE VIA SCRIPT =====
+async function procesarDesdeDrive() {
+  document.getElementById('ultima-act').textContent = 'Procesando archivo...';
+  try {
+    const url = SCRIPT_URL + '?t=' + Date.now();
+    const res = await fetch(url, { mode: 'no-cors' });
+    // no-cors no devuelve respuesta legible — esperamos y recargamos
+    document.getElementById('ultima-act').textContent = 'Procesando... actualizando en 5 segundos';
+    setTimeout(() => cargarDatos(), 5000);
+  } catch(e) {
+    // Con no-cors siempre da error de red pero el script igual se ejecuta
+    document.getElementById('ultima-act').textContent = 'Procesando... actualizando en 5 segundos';
+    setTimeout(() => cargarDatos(), 5000);
+  }
+}
+
+
 const MAPEO_COLS = {
   entidad: ['entidad'],
   neto:    ['neto'],
