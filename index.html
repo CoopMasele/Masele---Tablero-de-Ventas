@@ -410,7 +410,12 @@ async function cargarDatos() {
     const iFecha = cols.findIndex(c => c.toLowerCase().includes('operaci') || c.toLowerCase().includes('fecha'));
 
     if(iEnt<0 || iNeto<0) {
-      mostrarError('No se encontraron las columnas "Entidad" y "Neto" en la Sheet. Verificá los encabezados.');
+      // Sheet vacía o sin encabezados correctos — resetear datos
+      sheetData = [];
+      const ahora = new Date();
+      document.getElementById('ultima-act').textContent = `Actualizado: ${ahora.getHours()}:${String(ahora.getMinutes()).padStart(2,'0')}`;
+      await cargarConfig();
+      render();
       return;
     }
 
@@ -513,7 +518,21 @@ function calcularEntidades() {
 
 // ===== RENDER =====
 function render() {
-  if(!sheetData.length) return;
+  if(!sheetData.length) {
+    const {diasTotal, diasTrans} = {diasTotal: calcDiasHabiles(cfg.anio, cfg.mes).total, diasTrans: 0};
+    renderKPI({peOps:cfg.entidades.reduce((a,e)=>a+e.peOps,0), peMonto:cfg.entidades.reduce((a,e)=>a+e.peMonto,0), ops:0, kneto:0, interes:0, neto_tna:0, neto_plazo:0}, calcDiasHabiles(cfg.anio, cfg.mes).total, 0);
+    document.getElementById('table-body').innerHTML = cfg.entidades.map(e =>
+      `<tr><td>${e.nombre}</td><td>${e.peOps||'—'}</td><td>${e.peMonto?fmt(e.peMonto):'$0'}</td><td>0</td><td>$0</td><td>0%</td><td>—</td><td>—</td><td>$0</td><td>—</td><td>—</td><td>—</td></tr>`
+    ).join('') + `<tr class="total-row"><td>Total</td><td>${cfg.entidades.reduce((a,e)=>a+e.peOps,0)}</td><td>${fmt(cfg.entidades.reduce((a,e)=>a+e.peMonto,0))}</td><td>0</td><td>$0</td><td>100%</td><td>—</td><td>—</td><td>$0</td><td>—</td><td>—</td><td>$0</td></tr>`;
+    document.getElementById('col-diaria-real').textContent = '$0';
+    document.getElementById('col-diaria-esp').textContent = fmt(calcDiasHabiles(cfg.anio,cfg.mes).total ? Math.round(cfg.entidades.reduce((a,e)=>a+e.peMonto,0)/calcDiasHabiles(cfg.anio,cfg.mes).total) : 0);
+    document.getElementById('col-diaria-pct').textContent = '';
+    document.getElementById('obj-propio-real').textContent = fmt(cfg.objPropioReal);
+    document.getElementById('obj-propio-meta').textContent = fmt(cfg.objPropio);
+    document.getElementById('obj-real-input').value = cfg.objPropioReal||'';
+    renderConfig();
+    return;
+  }
   const {entidades, tot, diasTotal, diasTrans} = calcularEntidades();
   renderKPI(tot, diasTotal, diasTrans);
   renderTabla(entidades, tot, diasTotal, diasTrans);
