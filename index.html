@@ -194,15 +194,44 @@ h3{font-size:10.5px;font-weight:700;color:var(--verde-oscuro);text-transform:upp
 <div id="panel-config" class="panel">
   <div class="section-card">
     <h3>Presupuesto mensual (PE) por entidad</h3>
+
+    <!-- Herramientas de nuevo mes -->
+    <div style="background:var(--verde-claro);border:1px solid #b2d8c4;border-radius:7px;padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--verde-oscuro);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Guardar ticket promedio del mes actual</div>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 13px" onclick="guardarTicketMesActual()">Guardar ticket promedio actual</button>
+      </div>
+      <div style="width:1px;background:#b2d8c4;align-self:stretch"></div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--verde-oscuro);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Aumentar PE por % (aplica a $ PE)</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="pct-aumento" placeholder="%" min="0" max="999" style="width:70px;font-size:13px;padding:6px 8px;border:1px solid #b2d8c4;border-radius:5px;font-family:inherit">
+          <button class="btn btn-primary" style="font-size:12px;padding:6px 13px" onclick="aplicarAumentoPct()">Aplicar %</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 13px;background:rgba(0,0,0,.06);color:var(--verde-oscuro);border-color:#b2d8c4" onclick="recalcularOpsDesdeTicket()">Recalcular ops</button>
+        </div>
+        <div style="font-size:11px;color:var(--gris-texto);margin-top:4px">Ticket promedio guardado: <b id="ticket-guardado-info">—</b></div>
+      </div>
+    </div>
+
     <div style="overflow-x:auto;margin-top:10px">
       <table class="config-table">
         <thead><tr>
-          <th style="text-align:left;padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8">Entidad</th>
-          <th style="text-align:right;padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8"># PE</th>
-          <th style="text-align:right;padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8">$ PE</th>
-          <th style="padding:7px 10px;background:#f8f8f6;border:1px solid #e0e0d8"></th>
+          <th style="text-align:left;padding:7px 10px;background:#f0f7f3;border:1px solid #dde3de;color:var(--verde-oscuro)">Entidad</th>
+          <th style="text-align:right;padding:7px 10px;background:#f0f7f3;border:1px solid #dde3de;color:var(--verde-oscuro)"># PE</th>
+          <th style="text-align:right;padding:7px 10px;background:#f0f7f3;border:1px solid #dde3de;color:var(--verde-oscuro)">$ PE</th>
+          <th style="text-align:right;padding:7px 10px;background:#f0f7f3;border:1px solid #dde3de;color:var(--verde-oscuro)">% Aumento</th>
+          <th style="text-align:right;padding:7px 10px;background:#f0f7f3;border:1px solid #dde3de;color:var(--verde-oscuro)">Ticket ant.</th>
+          <th style="padding:7px 10px;background:#f0f7f3;border:1px solid #dde3de"></th>
         </tr></thead>
         <tbody id="config-body"></tbody>
+        <tfoot><tr id="config-total-row" style="background:#f0f7f3;font-weight:700;color:var(--verde-oscuro)">
+          <td style="border:1px solid #dde3de;padding:7px 10px">TOTAL</td>
+          <td style="border:1px solid #dde3de;padding:7px 10px;text-align:right" id="cfg-total-ops">—</td>
+          <td style="border:1px solid #dde3de;padding:7px 10px;text-align:right" id="cfg-total-monto">—</td>
+          <td style="border:1px solid #dde3de;padding:7px 10px"></td>
+          <td style="border:1px solid #dde3de;padding:7px 10px;text-align:right" id="cfg-total-ticket">—</td>
+          <td style="border:1px solid #dde3de;padding:7px 10px"></td>
+        </tr></tfoot>
       </table>
     </div>
     <div class="btn-row">
@@ -615,17 +644,89 @@ function switchChart(mode, el) {
 }
 
 function renderConfig() {
-  document.getElementById('config-body').innerHTML = cfg.entidades.map((e,i) => `<tr>
-    <td style="border:1px solid #e0e0d8;padding:5px 8px"><input type="text" value="${e.nombre}" onchange="cfg.entidades[${i}].nombre=this.value" style="width:130px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit"></td>
-    <td style="border:1px solid #e0e0d8;padding:5px 8px;text-align:right"><input type="number" value="${e.peOps}" onchange="cfg.entidades[${i}].peOps=+this.value" style="width:70px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit;text-align:right"></td>
-    <td style="border:1px solid #e0e0d8;padding:5px 8px;text-align:right"><input type="number" value="${e.peMonto}" onchange="cfg.entidades[${i}].peMonto=+this.value" style="width:130px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit;text-align:right"></td>
-    <td style="border:1px solid #e0e0d8;padding:5px 8px"><button class="btn-danger-sm" onclick="cfg.entidades.splice(${i},1);guardarCfg();renderConfig()">✕</button></td>
-  </tr>`).join('');
+  const tdStyle = 'border:1px solid #dde3de;padding:5px 8px';
+  const inStyle = 'font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit;text-align:right';
+  
+  document.getElementById('config-body').innerHTML = cfg.entidades.map((e,i) => {
+    const ticketAnt = e.ticketAnterior || 0;
+    return `<tr>
+      <td style="${tdStyle}"><input type="text" value="${e.nombre}" onchange="cfg.entidades[${i}].nombre=this.value;renderTotalesConfig()" style="width:130px;font-size:12px;padding:4px 6px;border:1px solid #d0d0c8;border-radius:4px;font-family:inherit"></td>
+      <td style="${tdStyle}"><input type="number" value="${e.peOps||0}" id="peOps_${i}" onchange="cfg.entidades[${i}].peOps=+this.value;renderTotalesConfig()" style="width:70px;${inStyle}"></td>
+      <td style="${tdStyle}"><input type="number" value="${e.peMonto||0}" id="peMonto_${i}" onchange="cfg.entidades[${i}].peMonto=+this.value;renderTotalesConfig()" style="width:130px;${inStyle}"></td>
+      <td style="${tdStyle}"><input type="number" placeholder="%" id="pctEnt_${i}" style="width:60px;${inStyle}"></td>
+      <td style="${tdStyle};text-align:right;font-size:12px;color:var(--gris-texto)">${ticketAnt ? fmt(ticketAnt) : '—'}</td>
+      <td style="${tdStyle}"><button class="btn-danger-sm" onclick="cfg.entidades.splice(${i},1);guardarCfg();renderConfig()">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  renderTotalesConfig();
   document.getElementById('cfg-mes-num').value = cfg.mes;
   document.getElementById('cfg-anio').value = cfg.anio;
   document.getElementById('cfg-obj-propio').value = cfg.objPropio;
   document.getElementById('cfg-obj-real-cfg').value = cfg.objPropioReal;
+  
+  // Mostrar ticket promedio guardado
+  const ticketGuardado = cfg.ticketMesAnterior;
+  document.getElementById('ticket-guardado-info').textContent = ticketGuardado 
+    ? (MESES_ES[ticketGuardado.mes] + ' ' + ticketGuardado.anio + ' — $' + Math.round(ticketGuardado.valor).toLocaleString('es-AR'))
+    : '—';
+  
   previsualizarDias();
+}
+
+function renderTotalesConfig() {
+  const totalOps   = cfg.entidades.reduce((a,e) => a + (e.peOps||0), 0);
+  const totalMonto = cfg.entidades.reduce((a,e) => a + (e.peMonto||0), 0);
+  const totalTicket = totalOps ? Math.round(totalMonto / totalOps) : 0;
+  document.getElementById('cfg-total-ops').textContent   = totalOps.toLocaleString('es-AR');
+  document.getElementById('cfg-total-monto').textContent = fmt(totalMonto);
+  document.getElementById('cfg-total-ticket').textContent = totalTicket ? fmt(totalTicket) : '—';
+}
+
+function guardarTicketMesActual() {
+  const {entidades, tot} = calcularEntidades();
+  // Guardar ticket promedio general y por entidad
+  cfg.ticketMesAnterior = {
+    mes: cfg.mes,
+    anio: cfg.anio,
+    valor: tot.ops ? Math.round(tot.kneto / tot.ops) : 0
+  };
+  // Guardar ticket por entidad
+  entidades.forEach(e => {
+    const idx = cfg.entidades.findIndex(c => c.nombre === e.nombre);
+    if(idx >= 0 && e.ops > 0) {
+      cfg.entidades[idx].ticketAnterior = Math.round(e.kneto / e.ops);
+    }
+  });
+  guardarCfg();
+  renderConfig();
+  alert('✓ Ticket promedio guardado: ' + fmt(cfg.ticketMesAnterior.valor) + ' (' + MESES_ES[cfg.mes] + ' ' + cfg.anio + ')');
+}
+
+function aplicarAumentoPct() {
+  const pctGlobal = +document.getElementById('pct-aumento').value;
+  cfg.entidades.forEach((e, i) => {
+    const pctInput = document.getElementById('pctEnt_'+i);
+    const pct = pctInput && pctInput.value ? +pctInput.value : pctGlobal;
+    if(!pct) return;
+    e.peMonto = Math.round(e.peMonto * (1 + pct/100));
+    // Recalcular ops si hay ticket anterior
+    if(e.ticketAnterior && e.ticketAnterior > 0) {
+      e.peOps = Math.round(e.peMonto / e.ticketAnterior);
+    }
+  });
+  guardarCfg();
+  renderConfig();
+}
+
+function recalcularOpsDesdeTicket() {
+  cfg.entidades.forEach(e => {
+    if(e.ticketAnterior && e.ticketAnterior > 0 && e.peMonto > 0) {
+      e.peOps = Math.round(e.peMonto / e.ticketAnterior);
+    }
+  });
+  guardarCfg();
+  renderConfig();
 }
 
 function agregarEntidad() {
