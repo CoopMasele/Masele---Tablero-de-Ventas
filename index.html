@@ -565,18 +565,34 @@ function renderGrafico() {
   const ctx = document.getElementById('chart-main').getContext('2d');
   if(chartInst){chartInst.destroy();chartInst=null;}
 
+  function parseFechaGrafico(f) {
+    if (!f) return null;
+    const s = String(f);
+    if (s.startsWith('Date(')) {
+      const parts = s.replace('Date(','').replace(')','').split(',');
+      const d = new Date(+parts[0], +parts[1], +parts[2]);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+    if (s.includes('-') && s.length >= 10) return s.slice(0,10);
+    if (s.includes('/')) {
+      const parts = s.split('/');
+      if(parts.length===3) return parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+    }
+    return s.slice(0,10);
+  }
+
   if(chartMode==='diario') {
     const byF = {};
     sheetData.forEach(r => {
-      const f = r.fecha ? String(r.fecha).slice(0,10) : 'Sin fecha';
+      const f = parseFechaGrafico(r.fecha) || 'Sin fecha';
       byF[f] = (byF[f]||0) + r.neto;
     });
-    const labels = Object.keys(byF).sort();
+    const labels = Object.keys(byF).filter(f=>f!=='Sin fecha').sort();
     chartInst = new Chart(ctx, {type:'bar', data:{labels, datasets:[{label:'Capital (M$)', data:labels.map(l=>Math.round(byF[l]/1000000*100)/100), backgroundColor:'#1a7a4a', borderRadius:4}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{ticks:{callback:v=>'$'+v+'M'}}}}});
   } else if(chartMode==='acumulado') {
     const byF = {};
-    sheetData.forEach(r => { const f = r.fecha?String(r.fecha).slice(0,10):'Sin fecha'; byF[f]=(byF[f]||0)+r.neto; });
-    const labels = Object.keys(byF).sort(); let acc=0;
+    sheetData.forEach(r => { const f=parseFechaGrafico(r.fecha)||'Sin fecha'; byF[f]=(byF[f]||0)+r.neto; });
+    const labels = Object.keys(byF).filter(f=>f!=='Sin fecha').sort(); let acc=0;
     const {tot} = calcularEntidades(); const meta = tot.peMonto/1000000;
     chartInst = new Chart(ctx, {type:'line', data:{labels, datasets:[
       {label:'Acumulado (M$)', data:labels.map(l=>{acc+=byF[l];return Math.round(acc/1000000*100)/100;}), borderColor:'#1a7a4a', backgroundColor:'rgba(26,122,74,0.08)', borderWidth:2, tension:0.3, pointRadius:4},
