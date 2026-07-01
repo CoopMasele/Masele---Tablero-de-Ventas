@@ -763,6 +763,8 @@ function cerrarMes() {
   alert(`✓ Mes cerrado. Ahora estás en ${MESES_ES[nuevoMes]} ${nuevoAnio}.\n\nTicket promedio guardado: ${fmt(cfg.ticketMesAnterior.valor)}\n\nConfigurar el PE del nuevo mes en la tabla de arriba.`);
   switchTab('config');
 }
+
+function recalcularOpsDesdeTicket() {
   cfg.entidades.forEach(e => {
     if(e.ticketAnterior && e.ticketAnterior > 0 && e.peMonto > 0) {
       e.peOps = Math.round(e.peMonto / e.ticketAnterior);
