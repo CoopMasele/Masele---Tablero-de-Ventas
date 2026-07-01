@@ -236,6 +236,7 @@ h3{font-size:10.5px;font-weight:700;color:var(--verde-oscuro);text-transform:upp
     </div>
     <div class="btn-row">
       <button class="btn btn-secondary" onclick="agregarEntidad()">+ Agregar entidad</button>
+      <button class="btn btn-danger" style="background:#dc2626;color:#fff;border:none;margin-left:auto" onclick="cerrarMes()">⚠ Cerrar mes y arrancar nuevo</button>
     </div>
   </div>
   <div class="section-card">
@@ -719,7 +720,49 @@ function aplicarAumentoPct() {
   renderConfig();
 }
 
-function recalcularOpsDesdeTicket() {
+function cerrarMes() {
+  const mesNombre = MESES_ES[cfg.mes] + ' ' + cfg.anio;
+  if(!confirm(`¿Confirmar cierre de ${mesNombre}?\n\nEsto va a:\n1. Guardar el ticket promedio actual de cada entidad\n2. Resetear todos los datos a 0\n3. Avanzar al mes siguiente\n\nEsta acción no se puede deshacer.`)) return;
+
+  // 1. Guardar ticket promedio actual por entidad
+  const {entidades, tot} = calcularEntidades();
+  cfg.ticketMesAnterior = {
+    mes: cfg.mes,
+    anio: cfg.anio,
+    valor: tot.ops ? Math.round(tot.kneto / tot.ops) : 0
+  };
+  entidades.forEach(e => {
+    const idx = cfg.entidades.findIndex(c => c.nombre === e.nombre);
+    if(idx >= 0 && e.ops > 0) {
+      cfg.entidades[idx].ticketAnterior = Math.round(e.kneto / e.ops);
+    }
+  });
+
+  // 2. Avanzar al mes siguiente
+  let nuevoMes = cfg.mes + 1;
+  let nuevoAnio = cfg.anio;
+  if(nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
+  cfg.mes = nuevoMes;
+  cfg.anio = nuevoAnio;
+
+  // 3. Resetear datos en Sheet — limpiar hoja Datos
+  sheetData = [];
+
+  guardarCfg();
+  renderConfig();
+  render();
+
+  // Limpiar la Sheet via Script
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({action: 'limpiarDatos'}),
+    headers: {'Content-Type': 'application/json'},
+    mode: 'no-cors'
+  });
+
+  alert(`✓ Mes cerrado. Ahora estás en ${MESES_ES[nuevoMes]} ${nuevoAnio}.\n\nTicket promedio guardado: ${fmt(cfg.ticketMesAnterior.valor)}\n\nConfigurar el PE del nuevo mes en la tabla de arriba.`);
+  switchTab('config');
+}
   cfg.entidades.forEach(e => {
     if(e.ticketAnterior && e.ticketAnterior > 0 && e.peMonto > 0) {
       e.peOps = Math.round(e.peMonto / e.ticketAnterior);
