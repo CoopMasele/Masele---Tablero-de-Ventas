@@ -807,15 +807,10 @@ function guardarConfig() {
   cfg.objPropio = +document.getElementById('cfg-obj-propio').value||0;
   cfg.objPropioReal = +document.getElementById('cfg-obj-real-cfg').value||0;
   guardarCfg();
-  // Guardar todo en Sheet
+  // Guardar todo en Sheet via GET (evita CORS)
   const vals = {objPropio: cfg.objPropio, objPropioReal: cfg.objPropioReal, mes: cfg.mes, anio: cfg.anio};
   Object.entries(vals).forEach(([clave, valor]) => {
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({action: 'setConfig', clave, valor}),
-      headers: {'Content-Type': 'application/json'},
-      mode: 'no-cors'
-    });
+    fetch(SCRIPT_URL + '?action=setConfig&clave=' + clave + '&valor=' + valor + '&t=' + Date.now(), {mode: 'no-cors'}).catch(()=>{});
   });
   render(); switchTab('tabla');
 }
@@ -825,14 +820,10 @@ function actualizarObjReal() {
   if(!val && val!==0) return;
   cfg.objPropioReal = val;
   guardarCfg();
-  // Guardar en Sheet via Script
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({action: 'setConfig', clave: 'objPropioReal', valor: val}),
-    headers: {'Content-Type': 'application/json'},
-    mode: 'no-cors'
-  });
+  // Guardar en Sheet via GET (evita CORS)
+  fetch(SCRIPT_URL + '?action=setConfig&clave=objPropioReal&valor=' + val + '&t=' + Date.now(), {mode: 'no-cors'}).catch(()=>{});
   render();
+  document.getElementById('ultima-act').textContent = 'Objetivo actualizado';
 }
 
 function guardarCfg() {
