@@ -313,6 +313,7 @@ let cfg = {
     {nombre:'30 de Octubre', peOps:0, peMonto:0},
     {nombre:'3 de Abril', peOps:29, peMonto:30000000},
     {nombre:'Mut. Pol. Cba.', peOps:255, peMonto:370000000},
+    {nombre:'SOEME', peOps:0, peMonto:0},
   ]
 };
 
@@ -1073,7 +1074,15 @@ async function unzipXLSX(arr) {
 // ===== INIT =====
 try {
   const s = localStorage.getItem(STORE_KEY);
-  if(s) cfg = {...cfg, ...JSON.parse(s)};
+  if(s) {
+    const defEnt = cfg.entidades;
+    cfg = {...cfg, ...JSON.parse(s)};
+    // Entidades fijas: si falta alguna del código en la config guardada, se agrega
+    if(!Array.isArray(cfg.entidades)) cfg.entidades = defEnt;
+    defEnt.forEach(d => {
+      if(!cfg.entidades.some(e => e.nombre === d.nombre)) cfg.entidades.push({...d});
+    });
+  }
 } catch(e){}
 
 renderConfig();
